@@ -3,6 +3,7 @@ package com.example.autoconfig;
 import com.dangdang.ddframe.job.api.ElasticJob;
 import com.dangdang.ddframe.job.api.simple.SimpleJob;
 import com.dangdang.ddframe.job.config.JobCoreConfiguration;
+import com.dangdang.ddframe.job.config.dataflow.DataflowJobConfiguration;
 import com.dangdang.ddframe.job.config.simple.SimpleJobConfiguration;
 import com.dangdang.ddframe.job.lite.api.JobScheduler;
 import com.dangdang.ddframe.job.lite.config.LiteJobConfiguration;
@@ -24,7 +25,7 @@ import java.util.Map;
 @Configuration
 @ConditionalOnBean(CoordinatorRegistryCenter.class)
 @AutoConfigureAfter(ZooKeeperAutoConfig.class)
-public class SimpleJobAutoConfig {
+public class DataFlowJobAutoConfig {
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -34,23 +35,23 @@ public class SimpleJobAutoConfig {
 
     @PostConstruct
     public void initSimpleJob(){
-        Map<String, Object> beans = applicationContext.getBeansWithAnnotation(ElasticSimpleJob.class);
+        Map<String, Object> beans = applicationContext.getBeansWithAnnotation(ElasticDataFlowJob.class);
         for (Map.Entry<String, Object> entry : beans.entrySet()) {
             Object instance = entry.getValue();
             Class<?>[] interfaces = instance.getClass().getInterfaces();
             for (Class<?> anInterface : interfaces) {
                 if ( anInterface == SimpleJob.class){
                     //注册
-                    ElasticSimpleJob anno = instance.getClass().getAnnotation(ElasticSimpleJob.class);
+                    ElasticDataFlowJob anno = instance.getClass().getAnnotation(ElasticDataFlowJob.class);
                     String jobName =anno.jobName();
                     String cron = anno.cron();
                     int count = anno.shardingCount();
                     boolean overwrite = anno.overwrite();
-
+                    boolean streaming=anno.streaming();
 
                     JobCoreConfiguration core = JobCoreConfiguration.newBuilder(jobName, cron, count).build();
-                    SimpleJobConfiguration simpleJobConfiguration = new SimpleJobConfiguration(core, instance.getClass().getCanonicalName());
-                    LiteJobConfiguration build = LiteJobConfiguration.newBuilder(simpleJobConfiguration).overwrite(overwrite).build();
+                    DataflowJobConfiguration dataflowJobConfiguration = new DataflowJobConfiguration(core, instance.getClass().getCanonicalName(),streaming);
+                    LiteJobConfiguration build = LiteJobConfiguration.newBuilder(dataflowJobConfiguration).overwrite(overwrite).build();
 
 //                    new JobScheduler(center,build).init();
                     new SpringJobScheduler((ElasticJob) instance,center,build).init();
